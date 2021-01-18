@@ -1,4 +1,6 @@
 function GspWs(url, key) {
+  var eventTarget = document.createTextNode(null);
+
   let _this = this;
   let socket;
   let authOk = false;
@@ -10,11 +12,15 @@ function GspWs(url, key) {
     Sub: 4,
   };
 
+  this.addEventListener = eventTarget.addEventListener.bind(eventTarget);
+  this.removeEventListener = eventTarget.removeEventListener.bind(eventTarget);
+  this.dispatchEvent = eventTarget.dispatchEvent.bind(eventTarget);
+
+  const errorEvent = "error";
+
   this.connect = function () {
     socket = new WebSocket(url, "gsp-protocol");
-    {
-      binaryType: "arraybuffer";
-    }
+    socket.binaryType = "arraybuffer";
 
     socket.addEventListener("open", onOpen);
     socket.addEventListener("message", onMsg);
@@ -23,18 +29,17 @@ function GspWs(url, key) {
   };
 
   function doAuth() {
-    let headerLen = 8;
+    let headerLen = 4;
     let keySize = key.length * 2;
 
-    var arr = new ArrayBuffer(headerLen + keySize);
-    var view = new Uint16Array(arr, 0, 2);
-    var keyView = new Uint16Array(arr, headerLen, key.length);
+    let arr = new ArrayBuffer(headerLen + keySize);
+    let view = new DataView(arr, 0, headerLen + keySize);
 
-    view[0] = MsgId.Authorize;
-    view[1] = key.length;
+    view.setInt16(0, MsgId.Authorize);
+    view.setInt16(2, key.length);
 
-    for (var i = 0, strLen = key.length; i < strLen; i++) {
-      keyView[i] = key.charCodeAt(i);
+    for (let i = 0, strLen = key.length; i < strLen; i++) {
+      view.setInt16(4 + i * 2, key.charCodeAt(i));
     }
 
     socket.send(arr);
@@ -44,13 +49,53 @@ function GspWs(url, key) {
     doAuth();
   }
 
-  function onMsg(event) {}
+  function onMsg(event) {
+    let data = event.data;
+    let view = new DataView(data, 0, data.byteLength);
+
+    let type = view.getInt16(0);
+    switch (type) {
+      case MsgId.Authorize:
+        onAuthorizeResponse(view);
+        break;
+    }
+  }
+
+  function onAuthorizeResponse(response) {
+    let bytes = response.byteLength;
+
+    if (bytes != 4)
+      pushError(
+        "Failed to authenticate",
+        "Auth response has to be 4 bytes long!"
+      );
+
+    let isOk = response.getInt16(2);
+
+    if (isOk) {
+      _this.authOk = true;
+    } else {
+      _this.authOk = false;
+      pushError(
+        "Failed to authenticate",
+        "Invalid API key."
+      );
+    }
+  }
+
+  function pushError(msg, detail) {
+    const event = new CustomEvent(errorEvent, {
+      detail: { msg: msg, detail: detail },
+    });
+    _this.dispatchEvent(event);
+  }
 
   function onClose(event) {
     console.log(event);
   }
 
-  function onError(event) {
-    console.log(event);
+  function onError(error) {
+    const event = new Event(errorEvent, error);
+    _this.dispatchEvent(event);
   }
 }
