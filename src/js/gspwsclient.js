@@ -1,4 +1,5 @@
 function GspWs(url, key) {
+  // create fake DOM just so we can emit events
   var eventTarget = document.createTextNode(null);
 
   let _this = this;
@@ -8,15 +9,41 @@ function GspWs(url, key) {
   const MsgId = {
     Authorize: 1,
     Get: 2,
-    Set: 3,
-    Sub: 4,
+    GetType: 3,
+    Set: 4,
+    Sub: 5,
+  };
+
+  this.TagType = {
+    GspNone: 0,
+    GspBit: 1,
+    GspByte: 2,
+    GspSByte: 3,
+    GspWord: 4,
+    GspSWord: 5,
+    GspDWord: 6,
+    GspSDWord: 7,
+    GspFloat: 8,
+    GspString: 9,
+    GspError: 10,
   };
 
   this.addEventListener = eventTarget.addEventListener.bind(eventTarget);
   this.removeEventListener = eventTarget.removeEventListener.bind(eventTarget);
   this.dispatchEvent = eventTarget.dispatchEvent.bind(eventTarget);
 
+  let typeCache = [];
+  let pendingValueRequests = [];
+  let pendingTypeRequests = [];
+
   const errorEvent = "error";
+  const readyEvent = "ready";
+  const newTagValueEvent = "tagValue";
+
+  const tagIDBytes = 4;
+  const headerSize = 4;
+
+  this.IdNone = 0xffffffff;
 
   this.connect = function () {
     socket = new WebSocket(url, "gsp-protocol");
@@ -29,7 +56,7 @@ function GspWs(url, key) {
   };
 
   function doAuth() {
-    let headerLen = 4;
+    let headerLen = headerSize;
     let keySize = key.length * 2;
 
     let arr = new ArrayBuffer(headerLen + keySize);
@@ -49,6 +76,72 @@ function GspWs(url, key) {
     doAuth();
   }
 
+  function CheckAuth() {
+    if (!authOk) {
+      pushError("Not authenticated!");
+      return false;
+    }
+
+    return true;
+  }
+
+  this.queryTagTypes = function (tagIdsArray) {
+    if (!CheckAuth()) {
+      return;
+    }
+
+    let tagsCount = tagIdsArray.length;
+    let idsToRequest = [];
+
+    for (let i = 0; i < tagsCount; ++i) {
+      if (!pendingTypeRequests.includes(tagIdsArray[i])) {
+        idsToRequest.push(tagIdsArray[i]);
+      }
+    }
+
+    let headerLen = headerSize;
+    tagsCount = idsToRequest.length;
+    let bytes = headerLen + tagsCount * tagIDBytes;
+
+    let arr = new ArrayBuffer(bytes);
+    let view = new DataView(arr, 0, bytes);
+
+    view.setInt16(0, MsgId.GetType);
+    view.setInt16(2, tagsCount);
+
+    for (let i = 0; i < tagsCount; ++i) {
+      view.setInt32(headerLen + i * tagIDBytes, idsToRequest[i]);
+      pendingTypeRequests.push(idsToRequest[i]);
+    }
+
+    socket.send(arr);
+  };
+
+  this.queryTagValues = function (tagIdsArray) {
+    if (!CheckAuth()) {
+      return;
+    }
+
+    let headerLen = headerSize;
+    let tagsCount = tagIdsArray.length;
+    let bytes = headerLen + tagsCount * tagIDBytes;
+
+    let arr = new ArrayBuffer(bytes);
+    let view = new DataView(arr, 0, bytes);
+
+    view.setInt16(0, MsgId.Get);
+    view.setInt16(2, tagsCount);
+
+    for (let i = 0; i < tagsCount; ++i)
+      view.setInt32(headerLen + i * tagIDBytes, tagIdsArray[i]);
+
+    socket.send(arr);
+  };
+
+  function close() {
+    socket.close();
+  }
+
   function onMsg(event) {
     let data = event.data;
     let view = new DataView(data, 0, data.byteLength);
@@ -58,6 +151,147 @@ function GspWs(url, key) {
       case MsgId.Authorize:
         onAuthorizeResponse(view);
         break;
+      case MsgId.Get:
+        onReceivedValues(view, 2);
+        break;
+      case MsgId.GetType:
+        onReceivedTypes(view, 2);
+        break;
+    }
+  }
+
+  function onReceivedTypes(view, pos) {
+    let bytes = view.byteLength - pos;
+
+    if (bytes < 2)
+      pushError("Failed to authenticate", "Malformed get tag type response.");
+
+    let tagCount = view.getInt16(pos);
+    pos += 2;
+
+    if (bytes < tagCount * 8)
+      pushError("Failed to authenticate", "Malformed get tag type response.");
+
+    let newTypes = [];
+    let ids = [];
+
+    // IDs
+    for (let i = 0; i < tagCount; ++i) {
+      let id = view.getInt32(pos);
+      pos += 4;
+      ids.push(id);
+    }
+
+    // Types
+    for (let i = 0; i < tagCount; ++i) {
+      let id = ids[i];
+
+      let typeId = view.getInt32(pos);
+      pos += 4;
+
+      typeCache[id] = typeId;
+      newTypes.push(id);
+    }
+
+    checkPendingValueRequests(newTypes);
+  }
+
+  function checkPendingValueRequests(newTypes) {
+    if (pendingValueRequests.length === 0) {
+      return;
+    }
+
+    let notHandled = [];
+
+    for (let i = 0; i < pendingValueRequests.length; ++i) {
+      let req = pendingValueRequests[i];
+
+      if (req.types.every((x) => typeCache[x] !== undefined)) {
+        readTagValues(req);
+      } else {
+        notHandled.push(req);
+      }
+
+      pendingValueRequests = notHandled;
+    }
+  }
+
+  function readTagValues(req) {
+    let values = [];
+
+    for (let i = 0; i < req.tags.length; ++i) {
+      readTagValue(req.tags[i], req, values);
+    }
+
+    const event = new CustomEvent(newTagValueEvent, {
+      detail: values,
+    });
+    _this.dispatchEvent(event);
+  }
+
+  function readTagValue(tag, req, values) {
+    let type = typeCache[tag];
+
+    switch (type) {
+      case _this.TagType.GspString:
+        readStringValue(tag, req, values);
+        break;
+      case _this.TagType.GspBit:
+      case _this.TagType.GspSByte:
+      case _this.TagType.GspWord:
+      case _this.TagType.GspSWord:
+      case _this.TagType.GspDWord:
+      case _this.TagType.GspSDWord:
+      case _this.TagType.GspFloat:
+      case _this.TagType.GspError:
+        readNumericValue(tag, req, values);
+        break;
+      default:
+        pushError("Invalid tag type", "Type: " + type);
+    }
+  }
+
+  function readNumericValue(tag, req, values) {
+    let val = req.view.getInt32(req.pos);
+    req.pos += 4;
+
+    values.push({ tag: tag, val: val, type: typeCache[tag] });
+  }
+
+  function readStringValue(tag, req) {}
+
+  function onReceivedValues(view, pos) {
+    let tagCount = view.getInt16(pos);
+    pos += 2;
+
+    let tags = [];
+    var data = { view: view, pos: pos };
+    let missingTypes = [];
+
+    for (let i = 0; i < tagCount; ++i) {
+      let id = view.getInt32(pos);
+      pos += 4;
+
+      let type = typeCache[id];
+      tags.push(id);
+
+      if (type === undefined) {
+        missingTypes.push(id);
+      }
+    }
+
+    if (missingTypes.length !== 0) {
+      let pendingReq = {
+        types: missingTypes,
+        tags: tags,
+        view: view,
+        pos: pos,
+      };
+
+      pendingValueRequests.push(pendingReq);
+      _this.queryTagTypes(missingTypes);
+    } else {
+      readTagValues(tags, view, pos);
     }
   }
 
@@ -73,13 +307,13 @@ function GspWs(url, key) {
     let isOk = response.getInt16(2);
 
     if (isOk) {
-      _this.authOk = true;
+      authOk = true;
+      const event = new CustomEvent(readyEvent);
+      _this.dispatchEvent(event);
     } else {
-      _this.authOk = false;
-      pushError(
-        "Failed to authenticate",
-        "Invalid API key."
-      );
+      authOk = false;
+      pushError("Failed to authenticate", "Invalid API key.");
+      close();
     }
   }
 
