@@ -1,3 +1,7 @@
+import "./customEventPoly";
+import { TextDecoder, TextEncoder } from "text-encoding";
+import $ from "jquery";
+
 export function WS(url, key) {
   // create fake DOM just so we can emit events
   var eventTarget = document.createTextNode(null);
@@ -73,7 +77,11 @@ export function WS(url, key) {
     socket.send(arr);
   }
 
-  function encodeIntoAtPosition(input, view, pos = 0) {
+  function encodeIntoAtPosition(input, view, pos) {
+    if (pos === undefined) {
+      pos = 0;
+    }
+
     let encoded = textEncoder.encode(input);
 
     for (let i = 0; i < encoded.length; ++i) {
@@ -107,8 +115,9 @@ export function WS(url, key) {
     let idsToRequest = [];
 
     for (let i = 0; i < tagsCount; ++i) {
-      if (!pendingTypeRequests.includes(tagIdsArray[i])) {
-        idsToRequest.push(tagIdsArray[i]);
+      let id = tagIdsArray[i];
+      if (pendingTypeRequests.indexOf(id) === -1) {
+        idsToRequest.push(id);
       }
     }
 
@@ -219,7 +228,14 @@ export function WS(url, key) {
     for (let i = 0; i < pendingValueRequests.length; ++i) {
       let req = pendingValueRequests[i];
 
-      if (req.types.every((x) => typeCache[x] !== undefined)) {
+      let missingType = false;
+      for (let i = 0; i < req.types.length; ++i) {
+        if (typeCache[req.types[i]] === undefined) {
+          missingType = true;
+          break;
+        }
+      }
+      if (!missingType) {
         readTagValues(req);
       } else {
         notHandled.push(req);
@@ -274,7 +290,7 @@ export function WS(url, key) {
   function readStringValue(tag, req, values) {
     let chars = req.view.getInt32(req.pos);
     req.pos += 4;
-    
+
     const u8View = new Int8Array(req.arr, req.pos, chars);
     let val = decodeString(u8View);
 
