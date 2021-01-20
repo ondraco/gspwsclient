@@ -266,15 +266,20 @@ export function WS(url, key) {
         readStringValue(tag, req, values);
         break;
       case _this.TagType.GspBit:
+      case _this.TagType.GspByte:
       case _this.TagType.GspSByte:
       case _this.TagType.GspWord:
       case _this.TagType.GspSWord:
       case _this.TagType.GspDWord:
       case _this.TagType.GspSDWord:
-      case _this.TagType.GspFloat:
       case _this.TagType.GspError:
         readNumericValue(tag, req, values);
         break;
+
+      case _this.TagType.GspFloat:
+        readIEEE32Value(tag, req, values);
+        break;
+        
       default:
         pushError("Invalid tag type", "Type: " + type);
     }
@@ -287,12 +292,20 @@ export function WS(url, key) {
     values.push({ tag: tag, val: val, type: typeCache[tag] });
   }
 
+  function readIEEE32Value(tag, req, values) {
+    let val = req.view.getFloat32(req.pos);
+    req.pos += 4;
+
+    values.push({ tag: tag, val: val, type: typeCache[tag] });
+  }
+
   function readStringValue(tag, req, values) {
     let chars = req.view.getInt32(req.pos);
     req.pos += 4;
 
     const u8View = new Int8Array(req.arr, req.pos, chars);
     let val = decodeString(u8View);
+    req.pos += chars;
 
     values.push({ tag: tag, val: val, type: typeCache[tag] });
   }
