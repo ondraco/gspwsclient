@@ -8,7 +8,12 @@
       "name": "Launch index.html",
       "type": "chrome",
       "request": "launch",
-      "file": "${workspaceFolder}/test/test.html"
+      "file": "${workspaceFolder}/test/test.html",
+      "webRoot": "${workspaceRoot}/src",
+      "sourceMaps": true,
+      "sourceMapPathOverrides": {
+        "webpack://GSPClient/./*": "${workspaceFolder}/*"
+      }
     }
   ]
 }

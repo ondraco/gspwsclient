@@ -4,7 +4,7 @@ let tagIds = [11, 21, 31, 100];
 let gws;
 
 function test() {
-  gws = new GspWs(host, key);
+  gws = new GSPClient.WS(host, key);
   gws.addEventListener("error", onError);
   gws.addEventListener("ready", onReady);
   gws.addEventListener("tagValue", onNewValue);

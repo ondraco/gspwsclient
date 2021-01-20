@@ -1,4 +1,4 @@
-function GspWs(url, key) {
+export function WS(url, key) {
   // create fake DOM just so we can emit events
   var eventTarget = document.createTextNode(null);
 

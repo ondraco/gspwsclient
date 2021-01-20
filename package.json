@@ -1,0 +1,27 @@
+{
+  "name": "gspwsclient",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/gspclient.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ondraco/gspwsclient.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ondraco/gspwsclient/issues"
+  },
+  "homepage": "https://github.com/ondraco/gspwsclient#readme",
+  "devDependencies": {
+    "webpack": "^5.16.0",
+    "webpack-cli": "^4.4.0"
+  }
+}
