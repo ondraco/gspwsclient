@@ -279,7 +279,7 @@ export function WS(url, key) {
       case _this.TagType.GspFloat:
         readIEEE32Value(tag, req, values);
         break;
-        
+
       default:
         pushError("Invalid tag type", "Type: " + type);
     }
@@ -330,19 +330,19 @@ export function WS(url, key) {
       }
     }
 
-    if (missingTypes.length !== 0) {
-      let pendingReq = {
-        types: missingTypes,
-        tags: tags,
-        arr: arr,
-        view: view,
-        pos: pos,
-      };
+    let req = {
+      types: missingTypes,
+      tags: tags,
+      arr: arr,
+      view: view,
+      pos: pos,
+    };
 
-      pendingValueRequests.push(pendingReq);
+    if (missingTypes.length !== 0) {
+      pendingValueRequests.push(req);
       _this.queryTagTypes(missingTypes);
     } else {
-      readTagValues(tags, view, pos);
+      readTagValues(req);
     }
   }
 
