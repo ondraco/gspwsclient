@@ -39,6 +39,8 @@ function GspWs(url, key) {
   const errorEvent = "error";
   const readyEvent = "ready";
   const newTagValueEvent = "tagValue";
+  const textEncoder = new TextEncoder();
+  const textDecoder = new TextDecoder();
 
   const tagIDBytes = 4;
   const headerSize = 4;
@@ -65,11 +67,22 @@ function GspWs(url, key) {
     view.setInt16(0, MsgId.Authorize);
     view.setInt16(2, key.length);
 
-    for (let i = 0, strLen = key.length; i < strLen; i++) {
-      view.setInt16(4 + i * 2, key.charCodeAt(i));
-    }
+    const u8View = new Int8Array(arr, 4);
+    encodeIntoAtPosition(key, u8View);
 
     socket.send(arr);
+  }
+
+  function encodeIntoAtPosition(input, view, pos = 0) {
+    let encoded = textEncoder.encode(input);
+
+    for (let i = 0; i < encoded.length; ++i) {
+      view[pos + i] = encoded[i];
+    }
+  }
+
+  function decodeString(view) {
+    return textDecoder.decode(view);
   }
 
   function onOpen(event) {
@@ -152,7 +165,7 @@ function GspWs(url, key) {
         onAuthorizeResponse(view);
         break;
       case MsgId.Get:
-        onReceivedValues(view, 2);
+        onReceivedValues(data, view, 2);
         break;
       case MsgId.GetType:
         onReceivedTypes(view, 2);
@@ -258,9 +271,17 @@ function GspWs(url, key) {
     values.push({ tag: tag, val: val, type: typeCache[tag] });
   }
 
-  function readStringValue(tag, req) {}
+  function readStringValue(tag, req, values) {
+    let chars = req.view.getInt32(req.pos);
+    req.pos += 4;
+    
+    const u8View = new Int8Array(req.arr, req.pos, chars);
+    let val = decodeString(u8View);
 
-  function onReceivedValues(view, pos) {
+    values.push({ tag: tag, val: val, type: typeCache[tag] });
+  }
+
+  function onReceivedValues(arr, view, pos) {
     let tagCount = view.getInt16(pos);
     pos += 2;
 
@@ -284,6 +305,7 @@ function GspWs(url, key) {
       let pendingReq = {
         types: missingTypes,
         tags: tags,
+        arr: arr,
         view: view,
         pos: pos,
       };
