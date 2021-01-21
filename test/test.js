@@ -1,6 +1,40 @@
 let host = "wss://127.0.0.1:443/API";
 let key = "rOG6t8kqkyY=";
-let tagIds = [100];
+let readTagIds = [100];
+let newTagValues = [
+  {
+    tag: 101,
+    val: "New value!",
+  },
+  {
+    tag: 102,
+    val: 0,
+  },
+  {
+    tag: 103,
+    val: 22,
+  },
+  {
+    tag: 104,
+    val: 222,
+  },
+  {
+    tag: 105,
+    val: 2222,
+  },
+  {
+    tag: 106,
+    val: 567.89,
+  },
+  {
+    tag: 107,
+    val: 1,
+  },
+  {
+    tag: 108,
+    val: 333,
+  },
+];
 let gws;
 let handled = 0;
 let start = 0;
@@ -46,7 +80,10 @@ function doSpeedTest() {
 function onReady(e) {
   if (speedTest) {
     doSpeedTest();
-  } else gws.queryTagValues(tagIds);
+  } else {
+    //gws.queryTagValues(readTagIds);
+    gws.setTagValues(newTagValues);
+  }
 }
 
 function onError(e) {

@@ -43,6 +43,7 @@ export function WS(url, key) {
   this.dispatchEvent = eventTarget.dispatchEvent.bind(eventTarget);
 
   let typeCache = [];
+  let pendingValueSetRequests = [];
   let pendingValueRequests = [];
   let pendingTypeRequests = [];
 
@@ -69,7 +70,7 @@ export function WS(url, key) {
 
   function doAuth() {
     let headerLen = headerSize;
-    let keySize = key.length * 2;
+    let keySize = key.length;
 
     let arr = new ArrayBuffer(headerLen + keySize);
     let view = new DataView(arr, 0, headerLen + keySize);
@@ -93,6 +94,8 @@ export function WS(url, key) {
     for (let i = 0; i < encoded.length; ++i) {
       view[pos + i] = encoded[i];
     }
+
+    return pos + encoded.length;
   }
 
   function decodeString(view) {
@@ -144,6 +147,123 @@ export function WS(url, key) {
 
     socket.send(arr);
   };
+
+  this.setTagValues = function (tagValuePairs) {
+    if (!CheckAuth()) {
+      return;
+    }
+
+    let uknownTagIds = [];
+
+    for (let i = 0; i < tagValuePairs.length; ++i) {
+      let pair = tagValuePairs[i];
+      if (typeCache[pair.tag] === undefined) {
+        uknownTagIds.push(pair.tag);
+      }
+    }
+
+    if (uknownTagIds.length === 0) {
+      sendSetRequest(known);
+    } else {
+      pendingValueSetRequests.push({
+        pairs: tagValuePairs,
+        types: uknownTagIds,
+      });
+      this.queryTagTypes(uknownTagIds);
+    }
+  };
+
+  // Sends the request to change values
+  // the type of all tags needs to be known at this point
+  function sendSetRequest(tagValuePairs) {
+    if (!CheckAuth()) {
+      return;
+    }
+
+    let headerLen = headerSize;
+    let tagsCount = tagValuePairs.length;
+    let bytes = headerLen + tagsCount * tagIDBytes;
+
+    for (let i = 0; i < tagsCount; ++i) {
+      let pair = tagValuePairs[i];
+      prepareForSend(pair);
+      bytes += pair.size;
+    }
+
+    let arr = new ArrayBuffer(bytes);
+    let view = new DataView(arr, 0, bytes);
+    let pos = headerLen;
+
+    view.setInt16(0, MsgId.Set);
+    view.setInt16(2, tagsCount);
+
+    // IDs
+    for (let i = 0; i < tagsCount; ++i) {
+      view.setInt32(pos, tagValuePairs[i].tag);
+      pos += tagIDBytes;
+    }
+
+    let req = { arr: arr, view: view, pos: pos };
+
+    for (let i = 0; i < tagsCount; ++i) {
+      req.pair = tagValuePairs[i];
+      serializeTagValue(req);
+    }
+
+    socket.send(arr);
+  }
+
+  function prepareForSend(pair) {
+    let type = typeCache[pair.tag];
+
+    switch (type) {
+      case _this.TagType.GspString:
+        pair.encoded = textEncoder.encode(pair.val);
+        pair.size = pair.encoded.length + 4;
+        break;
+      case _this.TagType.GspBit:
+      case _this.TagType.GspByte:
+      case _this.TagType.GspSByte:
+      case _this.TagType.GspWord:
+      case _this.TagType.GspSWord:
+      case _this.TagType.GspDWord:
+      case _this.TagType.GspSDWord:
+      case _this.TagType.GspError:
+      case _this.TagType.GspFloat:
+        pair.size = 4;
+        break;
+
+      default:
+        pushError("Invalid tag type", "Type: " + type);
+    }
+  }
+
+  function serializeTagValue(req) {
+    let type = typeCache[req.pair.tag];
+
+    switch (type) {
+      case _this.TagType.GspString:
+        writeStringValue(req.pair, req);
+        break;
+      case _this.TagType.GspBit:
+      case _this.TagType.GspByte:
+      case _this.TagType.GspSByte:
+      case _this.TagType.GspWord:
+      case _this.TagType.GspSWord:
+      case _this.TagType.GspDWord:
+      case _this.TagType.GspSDWord:
+      case _this.TagType.GspError:
+        writeNumericValue(req.pair, req);
+        break;
+
+      case _this.TagType.GspFloat:
+        writeIEEE32Value(req.pair, req);
+        break;
+
+      default:
+        pushError("Invalid tag type", "Type: " + type);
+    }
+  }
 
   this.queryTagValues = function (tagIdsArray) {
     if (!CheckAuth()) {
@@ -219,7 +339,7 @@ export function WS(url, key) {
     if (view.byteLength - pos < 2)
       pushError("Malformed communication", "RESULT_ACCESS_DENIED_WRITE");
 
-    let tagCount = view.getInt16();
+    let tagCount = view.getInt16(2);
     pos += 2;
 
     if (view.byteLength - pos < tagCount * 4)
@@ -271,6 +391,38 @@ export function WS(url, key) {
   }
 
   function checkPendingValueRequests(newTypes) {
+    checkPendingSetValueRequests(newTypes);
+    checkPendingGetValueRequests(newTypes);
+  }
+
+  function checkPendingSetValueRequests(newTypes) {
+    if (pendingValueSetRequests.length === 0) {
+      return;
+    }
+
+    let notHandled = [];
+
+    for (let i = 0; i < pendingValueSetRequests.length; ++i) {
+      let req = pendingValueSetRequests[i];
+
+      let missingType = false;
+      for (let i = 0; i < req.types.length; ++i) {
+        if (typeCache[req.types[i]] === undefined) {
+          missingType = true;
+          break;
+        }
+      }
+      if (!missingType) {
+        sendSetRequest(req.pairs);
+      } else {
+        notHandled.push(req);
+      }
+
+      pendingValueSetRequests = notHandled;
+    }
+  }
+
+  function checkPendingGetValueRequests(newTypes) {
     if (pendingValueRequests.length === 0) {
       return;
     }
@@ -344,11 +496,21 @@ export function WS(url, key) {
     values.push({ tag: tag, val: val, type: typeCache[tag] });
   }
 
+  function writeNumericValue(pair, req) {
+    req.view.setInt32(req.pos, pair.val);
+    req.pos += 4;
+  }
+
   function readIEEE32Value(tag, req, values) {
     let val = req.view.getFloat32(req.pos);
     req.pos += 4;
 
     values.push({ tag: tag, val: val, type: typeCache[tag] });
+  }
+
+  function writeIEEE32Value(pair, req) {
+    req.view.setFloat32(req.pos, pair.val);
+    req.pos += 4;
   }
 
   function readStringValue(tag, req, values) {
@@ -360,6 +522,18 @@ export function WS(url, key) {
     req.pos += chars;
 
     values.push({ tag: tag, val: val, type: typeCache[tag] });
+  }
+
+  function writeStringValue(pair, req) {
+    // string length
+    req.view.setInt32(req.pos, pair.size);
+    req.pos += 4;
+
+    let view = new Int8Array(req.arr, req.pos, pair.encoded.length);
+    for (let i = 0; i < pair.encoded.length; ++i) {
+      view[i] = pair.encoded[i];
+    }
+    req.pos += pair.encoded.length;
   }
 
   function onReceivedValues(arr, view, pos) {
