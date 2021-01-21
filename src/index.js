@@ -16,6 +16,12 @@ export function WS(url, key) {
     GetType: 3,
     Set: 4,
     Sub: 5,
+    RESULT_OK: 4000,
+    RESULT_WRONG_FORMAT: 4001,
+    RESULT_AUTH_FAILED: 4002,
+    RESULT_ACCESS_DENIED: 4003,
+    RESULT_ACCESS_DENIED_READ: 4004,
+    RESULT_ACCESS_DENIED_WRITE: 4005,
   };
 
   this.TagType = {
@@ -179,19 +185,65 @@ export function WS(url, key) {
       case MsgId.GetType:
         onReceivedTypes(view, 2);
         break;
+      case MsgId.RESULT_ACCESS_DENIED_READ:
+        onAccessDeniedRead(view, 2);
+        break;
+      case MsgId.RESULT_ACCESS_DENIED_WRITE:
+        onAccessDeniedWrite(view, 2);
+        break;
     }
   }
 
-  function onReceivedTypes(view, pos) {
-    let bytes = view.byteLength - pos;
+  function onAccessDeniedRead(view, pos) {
+    if (view.byteLength - pos < 2)
+      pushError("Malformed communication", "RESULT_ACCESS_DENIED_READ");
 
-    if (bytes < 2)
+    let tagCount = view.getInt16(pos);
+    pos += 2;
+
+    if (view.byteLength - pos < tagCount * 4)
+      pushError("Failed to authenticate", "Malformed get tag type response.");
+    let ids = [];
+
+    // IDs
+    for (let i = 0; i < tagCount; ++i) {
+      let id = view.getInt32(pos);
+      pos += 4;
+      ids.push(id);
+    }
+
+    pushError("ACCESS_DENIED_READ", ids);
+  }
+
+  function onAccessDeniedWrite(view, pos) {
+    if (view.byteLength - pos < 2)
+      pushError("Malformed communication", "RESULT_ACCESS_DENIED_WRITE");
+
+    let tagCount = view.getInt16();
+    pos += 2;
+
+    if (view.byteLength - pos < tagCount * 4)
+      pushError("Malformed communication", "RESULT_ACCESS_DENIED_WRITE");
+    let ids = [];
+
+    // IDs
+    for (let i = 0; i < tagCount; ++i) {
+      let id = view.getInt32(pos);
+      pos += 4;
+      ids.push(id);
+    }
+
+    pushError("RESULT_ACCESS_DENIED_WRITE", ids);
+  }
+
+  function onReceivedTypes(view, pos) {
+    if (view.byteLength - pos < 2)
       pushError("Failed to authenticate", "Malformed get tag type response.");
 
     let tagCount = view.getInt16(pos);
     pos += 2;
 
-    if (bytes < tagCount * 8)
+    if (view.byteLength - pos < tagCount * 8)
       pushError("Failed to authenticate", "Malformed get tag type response.");
 
     let newTypes = [];

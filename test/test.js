@@ -1,6 +1,6 @@
-let host = "wss://192.168.1.130:443/API";
+let host = "wss://127.0.0.1:443/API";
 let key = "rOG6t8kqkyY=";
-let tagIds = [0];
+let tagIds = [100];
 let gws;
 let handled = 0;
 let start = 0;
@@ -26,7 +26,7 @@ function onNewValue(e) {
   } else {
     $.each(e.detail, function (index, value) {
       console.log(
-        " ID: " + value.tag + " TYPE: " + value.type + " VAL: " + value.val
+        "ID: " + value.tag + " TYPE: " + value.type + " VAL: " + value.val
       );
     });
   }
@@ -50,5 +50,9 @@ function onReady(e) {
 }
 
 function onError(e) {
-  console.log(e);
+  if (e.detail !== undefined) {
+    console.log("ERR:" + e.detail.msg + " - " + e.detail.detail);
+  } else {
+    console.log(e);
+  }
 }
