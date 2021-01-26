@@ -526,7 +526,7 @@ export function WS(url, key) {
 
   function writeStringValue(pair, req) {
     // string length
-    req.view.setInt32(req.pos, pair.size);
+    req.view.setInt32(req.pos, pair.encoded.length);
     req.pos += 4;
 
     let view = new Int8Array(req.arr, req.pos, pair.encoded.length);
