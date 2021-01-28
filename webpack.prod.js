@@ -8,8 +8,8 @@ module.exports = [
       path.resolve(__dirname, "src/index.js"),
     ],
     output: {
-      path: path.resolve(__dirname, "dist"),
-      filename: "es5/gspclient.js",
+      path: path.resolve(__dirname, "release"),
+      filename: "es5/gspclient.min.js",
       library: "GSPClient",
       libraryTarget: "var",
     },
@@ -40,7 +40,7 @@ module.exports = [
       minimize: true,
     },
     output: {
-      path: path.resolve(__dirname, "dist"),
+      path: path.resolve(__dirname, "release"),
       filename: "var/gspclient.min.js",
       library: "GSPClient",
       libraryTarget: "var",
@@ -54,7 +54,7 @@ module.exports = [
       minimize: true,
     },
     output: {
-      path: path.resolve(__dirname, "dist"),
+      path: path.resolve(__dirname, "release"),
       filename: "commonjs2/gspclient.min.js",
       library: "GSPClient",
       libraryTarget: "commonjs2",
