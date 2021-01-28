@@ -49,7 +49,7 @@ function test() {
   gws.addEventListener("error", onError);
   gws.addEventListener("ready", onReady);
   gws.addEventListener("tagValue", onNewValue);
-  gws.connect(host);
+  gws.connect();
 }
 
 function onNewValue(e) {

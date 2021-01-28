@@ -10,7 +10,10 @@
     "start": "webpack serve --open --config webpack.dev.js",
     "debug": "webpack --config webpack.dev.js",
     "debuges5": "webpack --config webpack.es5dev.js",
-    "build": "webpack --config webpack.prod.js"
+    "buildES5": "webpack --config webpack.es5.js",
+    "buildVar": "webpack --config webpack.es5.js",
+    "buildCommonJS2": "webpack --config webpack.commonjs2.js",
+    "build": "npm run buildCommonJS2 && npm run buildES5 && npm run buildVar"
   },
   "repository": {
     "type": "git",
@@ -35,6 +38,7 @@
   },
   "dependencies": {
     "jquery": "^3.5.1",
-    "text-encoding": "^0.7.0"
+    "text-encoding": "^0.7.0",
+    "ws": "^7.4.2"
   }
 }

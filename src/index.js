@@ -604,6 +604,6 @@ export function WS(url, key) {
   }
 
   function onError(error) {
-    _eventEmmiter.emit(errorEvent, error);
+    eventEmmiter.emit(errorEvent, error);
   }
 }

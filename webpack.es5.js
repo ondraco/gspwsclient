@@ -8,15 +8,14 @@ module.exports = (env) => {
         path.resolve(__dirname, "src/index.js"),
       ],
       output: {
-        path: path.resolve(__dirname, "dist"),
-        filename: "gspclient.js",
+        path: path.resolve(__dirname, "release"),
+        filename: "es5/gspclient.min.js",
         library: "GSPClient",
         libraryTarget: "var",
       },
-      mode: "development",
-      devtool: "source-map",
+      mode: "production",
       optimization: {
-        minimize: false,
+        minimize: true,
       },
       module: {
         rules: [
