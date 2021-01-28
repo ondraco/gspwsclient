@@ -1,4 +1,3 @@
-import "./customEventPoly";
 import { TextDecoder, TextEncoder } from "text-encoding";
 import $ from "jquery";
 

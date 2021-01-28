@@ -9,6 +9,7 @@
   "scripts": {
     "start": "webpack serve --open --config webpack.dev.js",
     "debug": "webpack --config webpack.dev.js",
+    "debuges5": "webpack --config webpack.es5dev.js",
     "build": "webpack --config webpack.prod.js"
   },
   "repository": {
