@@ -53,12 +53,12 @@ function test() {
 }
 
 function onNewValue(e) {
-  handled += e.detail.length;
+  handled += e.length;
 
   if (speedTest) {
     gws.queryTagValues(tagIds);
   } else {
-    $.each(e.detail, function (index, value) {
+    $.each(e, function (index, value) {
       console.log(
         "ID: " + value.tag + " TYPE: " + value.type + " VAL: " + value.val
       );
@@ -81,14 +81,14 @@ function onReady(e) {
   if (speedTest) {
     doSpeedTest();
   } else {
-    //gws.queryTagValues(readTagIds);
-    gws.setTagValues(newTagValues);
+    gws.queryTagValues(readTagIds);
+    //gws.setTagValues(newTagValues);
   }
 }
 
 function onError(e) {
-  if (e.detail !== undefined) {
-    console.log("ERR:" + e.detail.msg + " - " + e.detail.detail);
+  if (e !== undefined) {
+    console.log("ERR:" + e.msg + " - " + e.detail);
   } else {
     console.log(e);
   }

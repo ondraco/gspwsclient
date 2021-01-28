@@ -1,9 +1,11 @@
 import { TextDecoder, TextEncoder } from "text-encoding";
 import $ from "jquery";
 
+const EventEmitter = require("events");
+
 export function WS(url, key) {
   // create fake DOM just so we can emit events
-  var eventTarget = document.createTextNode(null);
+  var eventEmmiter = new EventEmitter();
 
   let _this = this;
   let socket;
@@ -37,9 +39,13 @@ export function WS(url, key) {
     GspError: 10,
   };
 
-  this.addEventListener = eventTarget.addEventListener.bind(eventTarget);
-  this.removeEventListener = eventTarget.removeEventListener.bind(eventTarget);
-  this.dispatchEvent = eventTarget.dispatchEvent.bind(eventTarget);
+  this.addEventListener = function (name, callback) {
+    eventEmmiter.on(name, callback);
+  };
+
+  this.removeEventListener = function (name, callback) {
+    eventEmmiter.removeListener(name, callback);
+  };
 
   let typeCache = [];
   let pendingValueSetRequests = [];
@@ -455,10 +461,7 @@ export function WS(url, key) {
       readTagValue(req.tags[i], req, values);
     }
 
-    const event = new CustomEvent(newTagValueEvent, {
-      detail: values,
-    });
-    _this.dispatchEvent(event);
+    eventEmmiter.emit(newTagValueEvent, values);
   }
 
   function readTagValue(tag, req, values) {
@@ -584,8 +587,7 @@ export function WS(url, key) {
 
     if (isOk) {
       authOk = true;
-      const event = new CustomEvent(readyEvent);
-      _this.dispatchEvent(event);
+      eventEmmiter.emit(readyEvent);
     } else {
       authOk = false;
       pushError("Failed to authenticate", "Invalid API key.");
@@ -594,10 +596,7 @@ export function WS(url, key) {
   }
 
   function pushError(msg, detail) {
-    const event = new CustomEvent(errorEvent, {
-      detail: { msg: msg, detail: detail },
-    });
-    _this.dispatchEvent(event);
+    eventEmmiter.emit(errorEvent, { msg: msg, detail: detail });
   }
 
   function onClose(event) {
@@ -605,7 +604,6 @@ export function WS(url, key) {
   }
 
   function onError(error) {
-    const event = new Event(errorEvent, error);
-    _this.dispatchEvent(event);
+    _eventEmmiter.emit(errorEvent, error);
   }
 }
