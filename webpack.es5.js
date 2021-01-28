@@ -3,6 +3,7 @@ const path = require("path");
 module.exports = (env) => {
   return [
     {
+      target: "web",
       entry: [
         path.resolve(__dirname, "src/customEventPoly.js"),
         path.resolve(__dirname, "src/index.js"),

@@ -2,6 +2,7 @@ import { TextDecoder, TextEncoder } from "text-encoding";
 import $ from "jquery";
 
 const EventEmitter = require("events");
+const WebSocket = require('isomorphic-ws')
 
 export function WS(url, key) {
   // create fake DOM just so we can emit events
