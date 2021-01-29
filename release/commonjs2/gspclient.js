@@ -18022,6 +18022,7 @@ function WS(url, key) {
   let pendingValueRequests = [];
   let pendingTypeRequests = [];
 
+  const closeEvent = "close";
   const errorEvent = "error";
   const readyEvent = "ready";
   const newTagValueEvent = "tagValue";
@@ -18261,9 +18262,9 @@ function WS(url, key) {
     socket.send(arr);
   };
 
-  function close() {
+  this.close = function() {
     socket.close();
-  }
+  };
 
   function onMsg(event) {
     let data = event.data;
@@ -18561,7 +18562,7 @@ function WS(url, key) {
     } else {
       authOk = false;
       pushError("Failed to authenticate", "Invalid API key.");
-      close();
+      _this.close();
     }
   }
 
@@ -18569,8 +18570,8 @@ function WS(url, key) {
     eventEmmiter.emit(errorEvent, { msg: msg, detail: detail });
   }
 
-  function onClose(event) {
-    console.log(event);
+  function onClose(e) {
+    eventEmmiter.emit(closeEvent, e);
   }
 
   function onError(error) {
