@@ -2,7 +2,7 @@ import { TextDecoder, TextEncoder } from "text-encoding";
 import $ from "jquery";
 
 const EventEmitter = require("events");
-const WebSocket = require('isomorphic-ws')
+const WebSocket = require("isomorphic-ws");
 
 export function WS(url, key) {
   // create fake DOM just so we can emit events
@@ -72,7 +72,7 @@ export function WS(url, key) {
     socket.addEventListener("open", onOpen);
     socket.addEventListener("message", onMsg);
     socket.addEventListener("close", onClose);
-    socket.addEventListener("error", onError);
+    socket.addEventListener("error", onWsError);
   };
 
   function doAuth() {
@@ -293,7 +293,7 @@ export function WS(url, key) {
     socket.send(arr);
   };
 
-  this.close = function() {
+  this.close = function () {
     socket.close();
   };
 
@@ -605,7 +605,8 @@ export function WS(url, key) {
     eventEmmiter.emit(closeEvent, e);
   }
 
-  function onError(error) {
-    eventEmmiter.emit(errorEvent, error);
+  function onWsError(error) {
+    pushError("WS error: " + error);
+    _this.close();
   }
 }
