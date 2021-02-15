@@ -17,7 +17,8 @@ export function WS(url, key) {
     Get: 2,
     GetType: 3,
     Set: 4,
-    Sub: 5,
+    Subscribe: 5,
+    Unsubscribe: 6,
     RESULT_OK: 4000,
     RESULT_WRONG_FORMAT: 4001,
     RESULT_AUTH_FAILED: 4002,
@@ -270,6 +271,48 @@ export function WS(url, key) {
       default:
         pushError("Invalid tag type", "Type: " + type);
     }
+  }
+
+  this.subscribe = function(tagIdsArray) {
+    if (!CheckAuth()) {
+      return;
+    }
+
+    let headerLen = headerSize;
+    let tagsCount = tagIdsArray.length;
+    let bytes = headerLen + tagsCount * tagIDBytes;
+
+    let arr = new ArrayBuffer(bytes);
+    let view = new DataView(arr, 0, bytes);
+
+    view.setInt16(0, MsgId.Subscribe);
+    view.setInt16(2, tagsCount);
+
+    for (let i = 0; i < tagsCount; ++i)
+      view.setInt32(headerLen + i * tagIDBytes, tagIdsArray[i]);
+
+    socket.send(arr);
+  }
+
+  this.unsubscribe = function(tagIdsArray) {
+    if (!CheckAuth()) {
+      return;
+    }
+
+    let headerLen = headerSize;
+    let tagsCount = tagIdsArray.length;
+    let bytes = headerLen + tagsCount * tagIDBytes;
+
+    let arr = new ArrayBuffer(bytes);
+    let view = new DataView(arr, 0, bytes);
+
+    view.setInt16(0, MsgId.Unsubscribe);
+    view.setInt16(2, tagsCount);
+
+    for (let i = 0; i < tagsCount; ++i)
+      view.setInt32(headerLen + i * tagIDBytes, tagIdsArray[i]);
+
+    socket.send(arr);
   }
 
   this.queryTagValues = function (tagIdsArray) {
@@ -606,7 +649,7 @@ export function WS(url, key) {
   }
 
   function onWsError(error) {
-    pushError("WS error: " + error);
+    pushError("WS error", error);
     _this.close();
   }
 }

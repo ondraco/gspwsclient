@@ -49,6 +49,7 @@ function test() {
   gws.addEventListener("error", onError);
   gws.addEventListener("ready", onReady);
   gws.addEventListener("tagValue", onNewValue);
+  gws.addEventListener("close", onClose);
   gws.connect();
 }
 
@@ -82,8 +83,13 @@ function onReady(e) {
     doSpeedTest();
   } else {
     gws.queryTagValues(readTagIds);
+    gws.subscribe(readTagIds);
     //gws.setTagValues(newTagValues);
   }
+}
+
+function onClose(e) {
+  console.log(e);
 }
 
 function onError(e) {
