@@ -171,7 +171,7 @@ export function WS(url, key) {
     }
 
     if (uknownTagIds.length === 0) {
-      sendSetRequest(known);
+      sendSetRequest(tagValuePairs);
     } else {
       pendingValueSetRequests.push({
         pairs: tagValuePairs,
@@ -273,7 +273,7 @@ export function WS(url, key) {
     }
   }
 
-  this.subscribe = function(tagIdsArray) {
+  this.subscribe = function (tagIdsArray) {
     if (!CheckAuth()) {
       return;
     }
@@ -292,9 +292,9 @@ export function WS(url, key) {
       view.setInt32(headerLen + i * tagIDBytes, tagIdsArray[i]);
 
     socket.send(arr);
-  }
+  };
 
-  this.unsubscribe = function(tagIdsArray) {
+  this.unsubscribe = function (tagIdsArray) {
     if (!CheckAuth()) {
       return;
     }
@@ -313,7 +313,7 @@ export function WS(url, key) {
       view.setInt32(headerLen + i * tagIDBytes, tagIdsArray[i]);
 
     socket.send(arr);
-  }
+  };
 
   this.queryTagValues = function (tagIdsArray) {
     if (!CheckAuth()) {
