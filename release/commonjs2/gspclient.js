@@ -18131,19 +18131,23 @@ function WS(url, key) {
     }
 
     let uknownTagIds = [];
+    let reqPairs = [];
 
     for (let i = 0; i < tagValuePairs.length; ++i) {
       let pair = tagValuePairs[i];
       if (typeCache[pair.tag] === undefined) {
         uknownTagIds.push(pair.tag);
       }
+
+      // make copy
+      reqPairs.push({ tag: pair.tag, val: pair.val });
     }
 
     if (uknownTagIds.length === 0) {
-      sendSetRequest(tagValuePairs);
+      sendSetRequest(reqPairs);
     } else {
       pendingValueSetRequests.push({
-        pairs: tagValuePairs,
+        pairs: reqPairs,
         types: uknownTagIds,
       });
       this.queryTagTypes(uknownTagIds);

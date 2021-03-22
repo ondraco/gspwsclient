@@ -1,6 +1,6 @@
 let host = "wss://127.0.0.1:443/API";
 let key = "rOG6t8kqkyY=";
-let readTagIds = [100];
+let readTagIds = [0];
 let newTagValues = [
   {
     tag: 101,
@@ -37,8 +37,6 @@ let newTagValues = [
 ];
 let gws;
 let handled = 0;
-let start = 0;
-let speedTest = false;
 
 $(function () {
   test();
@@ -55,37 +53,17 @@ function test() {
 
 function onNewValue(e) {
   handled += e.length;
-
-  if (speedTest) {
-    gws.queryTagValues(tagIds);
-  } else {
-    $.each(e, function (index, value) {
-      console.log(
-        "ID: " + value.tag + " TYPE: " + value.type + " VAL: " + value.val
-      );
-    });
-  }
-}
-
-function doSpeedTest() {
-  setInterval(function () {
-    let delay = (Date.now() - start) / 1000;
-    let rate = handled / delay;
-    console.log("COUNT: " + handled + " RATE: " + rate + " tags/s");
-  }, 1000);
-
-  start = Date.now();
-  gws.queryTagValues(tagIds);
+  $.each(e, function (index, value) {
+    console.log(
+      "ID: " + value.tag + " TYPE: " + value.type + " VAL: " + value.val
+    );
+  });
 }
 
 function onReady(e) {
-  if (speedTest) {
-    doSpeedTest();
-  } else {
-    gws.queryTagValues(readTagIds);
-    gws.subscribe(readTagIds);
-    //gws.setTagValues(newTagValues);
-  }
+  gws.queryTagValues(readTagIds);
+  gws.subscribe(readTagIds);
+  //gws.setTagValues(newTagValues);
 }
 
 function onClose(e) {
