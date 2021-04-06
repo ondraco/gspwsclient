@@ -1,10 +1,14 @@
-let host = "ws://192.168.1.130/API";
+let host = "ws://192.168.1.103/API";
 let key = "4mM7qhB2I1w=";
 let readTagIds = [0];
 let gws;
-let handled = 0;
+
+let total = 0;
+let lastTotal = 0;
 let start = 0;
 let failed = false;
+
+const channel = new BroadcastChannel("test-channel");
 
 $(function () {
   test();
@@ -20,6 +24,10 @@ function test() {
 }
 
 function onReady(e) {
+  channel.addEventListener("message", (e) => {
+    total += e.data;
+  });
+
   gws.setTagValues(tagValues);
   doSpeedTest();
 }
@@ -28,14 +36,15 @@ function onNewValue(e) {
   validate(e);
 
   if (!failed) {
-    handled += e.length;
+    total += e.length;
+    channel.postMessage(e.length);
     gws.queryTagValues(readTagIds);
   }
 }
 
 function validate(e) {
   $.each(e, function (index, value) {
-    if (expectedValues[value.tag].val !== value.val) {
+    if (value.val !== tagValues[value.tag - 1].val) {
       failed = true;
       console.log(
         " FAILED ON ID: " +
@@ -43,7 +52,7 @@ function validate(e) {
           " VAL: " +
           value.val +
           " !== " +
-          expectedValues[value.tag].val
+          tagValues[value.tag - 1].val
       );
     }
   });
@@ -52,9 +61,13 @@ function validate(e) {
 function doSpeedTest() {
   setInterval(function () {
     let delay = (Date.now() - start) / 1000;
-    let rate = handled / delay;
-    console.log("COUNT: " + handled + " RATE: " + rate + " tags/s");
-  }, 1000);
+
+    let rate = (total - lastTotal) / delay;
+    console.log("COUNT: " + total + " RATE: " + rate + " tags/s");
+
+    start = Date.now();
+    lastTotal = total;
+  }, 10000);
 
   start = Date.now();
   gws.queryTagValues(readTagIds);
@@ -72,32 +85,7 @@ function onError(e) {
   }
 }
 
-let tagValues = [
-  // BIT0
-  { tag: 2, val: 1 },
-  { tag: 3, val: 0 },
-  { tag: 4, val: 1 },
-  { tag: 5, val: 0 },
-  { tag: 6, val: 1 },
-  { tag: 7, val: 0 },
-  { tag: 8, val: 1 },
-  { tag: 9, val: 0 },
-  { tag: 10, val: 1 },
-  { tag: 11, val: 0 },
-  // BYTE0
-  { tag: 13, val: 1 },
-  { tag: 14, val: 2 },
-  { tag: 15, val: 3 },
-  { tag: 16, val: 4 },
-  { tag: 17, val: 5 },
-  { tag: 18, val: 6 },
-  { tag: 19, val: 7 },
-  { tag: 20, val: 8 },
-  { tag: 21, val: 9 },
-  { tag: 22, val: 10 },
-];
-
-let expectedValues = [];
-$.each(tagValues, function (index, value) {
-    expectedValues[value.tag] = value;
-});
+let tagValues = [250];
+for (let i = 0; i < 250; ++i) {
+  tagValues[i] = { tag: i + 1, val: i + 1 };
+}

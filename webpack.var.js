@@ -16,5 +16,19 @@ module.exports = (env) => {
         libraryTarget: "var",
       },
     },
+    {
+      target: "web",
+      entry: path.resolve(__dirname, "src/index.js"),
+      mode: "production",
+      optimization: {
+        minimize: false,
+      },
+      output: {
+        path: path.resolve(__dirname, "release"),
+        filename: "var/gspclient.js",
+        library: "GSPClient",
+        libraryTarget: "var",
+      },
+    },
   ];
 };

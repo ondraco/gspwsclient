@@ -11,7 +11,7 @@
     "debug": "webpack --config webpack.dev.js",
     "debuges5": "webpack --config webpack.es5dev.js",
     "buildES5": "webpack --config webpack.es5.js",
-    "buildVar": "webpack --config webpack.es5.js",
+    "buildVar": "webpack --config webpack.var.js",
     "buildCommonJS2": "webpack --config webpack.commonjs2.js",
     "build": "npm run buildCommonJS2 && npm run buildES5 && npm run buildVar"
   },
