@@ -39,6 +39,9 @@ export function WS(url, key) {
     GspFloat: 8,
     GspString: 9,
     GspError: 10,
+    GspDouble: 11,
+    GspQWord: 12,
+    GspSQWord: 13,
   };
 
   this.addEventListener = function (name, callback) {
@@ -245,6 +248,12 @@ export function WS(url, key) {
         pair.size = 4;
         break;
 
+      case _this.TagType.GspQWord:
+      case _this.TagType.GspSQWord:
+      case _this.TagType.GspDouble:
+        pair.size = 8;
+        break;
+
       default:
         pushError("Invalid tag type", "Type: " + type);
     }
@@ -270,6 +279,15 @@ export function WS(url, key) {
 
       case _this.TagType.GspFloat:
         writeIEEE32Value(req.pair, req);
+        break;
+
+      case _this.TagType.GspDouble:
+        writeIEEE64Value(req.pair, req);
+        break;
+
+      case _this.TagType.GspQWord:
+      case _this.TagType.GspSQWord:
+        writeNumericValue64(req.pair, req);
         break;
 
       default:
@@ -520,19 +538,35 @@ export function WS(url, key) {
       case _this.TagType.GspString:
         readStringValue(tag, req, values);
         break;
+
       case _this.TagType.GspBit:
       case _this.TagType.GspByte:
-      case _this.TagType.GspSByte:
       case _this.TagType.GspWord:
-      case _this.TagType.GspSWord:
       case _this.TagType.GspDWord:
-      case _this.TagType.GspSDWord:
       case _this.TagType.GspError:
-        readNumericValue(tag, req, values);
+        readNumericValueU(tag, req, values);
+        break;
+
+      case _this.TagType.GspSByte:
+      case _this.TagType.GspSWord:
+      case _this.TagType.GspSDWord:
+        readNumericValueS(tag, req, values);
         break;
 
       case _this.TagType.GspFloat:
         readIEEE32Value(tag, req, values);
+        break;
+
+      case _this.TagType.GspDouble:
+        readIEEE64Value(tag, req, values);
+        break;
+
+      case _this.TagType.GspQWord:
+        readNumericValueU64(tag, req, values);
+        break;
+
+      case _this.TagType.GspSQWord:
+        readNumericValueS64(tag, req, values);
         break;
 
       default:
@@ -540,9 +574,30 @@ export function WS(url, key) {
     }
   }
 
-  function readNumericValue(tag, req, values) {
+  function readNumericValueU(tag, req, values) {
+    let val = req.view.getUint32(req.pos);
+    req.pos += 4;
+
+    values.push({ tag: tag, val: val, type: typeCache[tag] });
+  }
+
+  function readNumericValueS(tag, req, values) {
     let val = req.view.getInt32(req.pos);
     req.pos += 4;
+
+    values.push({ tag: tag, val: val, type: typeCache[tag] });
+  }
+
+  function readNumericValueU64(tag, req, values) {
+    let val = req.view.getBigUint64(req.pos);
+    req.pos += 8;
+
+    values.push({ tag: tag, val: val, type: typeCache[tag] });
+  }
+
+  function readNumericValueS64(tag, req, values) {
+    let val = req.view.getBigint64(req.pos);
+    req.pos += 8;
 
     values.push({ tag: tag, val: val, type: typeCache[tag] });
   }
@@ -552,11 +607,28 @@ export function WS(url, key) {
     req.pos += 4;
   }
 
+  function writeNumericValue64(pair, req) {
+    req.view.setBigInt64(req.pos, pair.val);
+    req.pos += 8;
+  }
+
   function readIEEE32Value(tag, req, values) {
     let val = req.view.getFloat32(req.pos);
     req.pos += 4;
 
     values.push({ tag: tag, val: val, type: typeCache[tag] });
+  }
+
+  function readIEEE64Value(tag, req, values) {
+    let val = req.view.getFloat64(req.pos);
+    req.pos += 8;
+
+    values.push({ tag: tag, val: val, type: typeCache[tag] });
+  }
+
+  function writeIEEE64Value(pair, req) {
+    req.view.setFloat64(req.pos, pair.val);
+    req.pos += 8;
   }
 
   function writeIEEE32Value(pair, req) {

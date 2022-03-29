@@ -1,5 +1,5 @@
-let host = "ws://192.168.1.103/API";
-let key = "4mM7qhB2I1w=";
+let host = "ws://127.0.0.1:80/API";
+let key = "k4UuIfxe1ik=";
 let readTagIds = [0];
 let gws;
 

@@ -1,38 +1,38 @@
-let host = "wss://127.0.0.1:443/API";
-let key = "rOG6t8kqkyY=";
+let host = "ws://127.0.0.1:80/API";
+let key = "k4UuIfxe1ik=";
 let readTagIds = [0];
 let newTagValues = [
   {
-    tag: 101,
-    val: "New value!",
-  },
-  {
-    tag: 102,
+    tag: 1,
     val: 0,
   },
   {
-    tag: 103,
+    tag: 2,
     val: 22,
   },
   {
-    tag: 104,
+    tag: 3,
     val: 222,
   },
   {
-    tag: 105,
-    val: 2222,
+    tag: 4,
+    val: 4444,
   },
   {
-    tag: 106,
-    val: 567.89,
+    tag: 5,
+    val: 7.654321,
   },
   {
-    tag: 107,
-    val: 1,
+    tag: 6,
+    val: "New-Text",
   },
   {
-    tag: 108,
-    val: 333,
+    tag: 7,
+    val: 1113.225151751,
+  },
+  {
+    tag: 8,
+    val: BigInt(20000000000063),
   },
 ];
 let gws;
@@ -63,7 +63,7 @@ function onNewValue(e) {
 function onReady(e) {
   gws.queryTagValues(readTagIds);
   gws.subscribe(readTagIds);
-  //gws.setTagValues(newTagValues);
+  gws.setTagValues(newTagValues);
 }
 
 function onClose(e) {
