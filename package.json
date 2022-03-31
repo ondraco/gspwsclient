@@ -13,7 +13,7 @@
     "buildES5": "webpack --config webpack.es5.js",
     "buildVar": "webpack --config webpack.var.js",
     "buildCommonJS2": "webpack --config webpack.commonjs2.js",
-    "build": "npm run buildCommonJS2 && npm run buildES5 && npm run buildVar"
+    "build": "npm run buildCommonJS2 && npm run buildVar"
   },
   "repository": {
     "type": "git",
@@ -39,7 +39,6 @@
   "dependencies": {
     "isomorphic-ws": "^4.0.1",
     "jquery": "^3.5.1",
-    "text-encoding": "^0.7.0",
     "ws": "^7.4.2"
   }
 }

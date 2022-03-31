@@ -1,4 +1,3 @@
-import { TextDecoder, TextEncoder } from "text-encoding";
 import $ from "jquery";
 
 const EventEmitter = require("events");
