@@ -1,4 +1,4 @@
-let host = "ws://127.0.0.1:80/API";
+let host = "wss://127.0.0.1/API";
 let key = "k4UuIfxe1ik=";
 let readTagIds = [0];
 let newTagValues = [
