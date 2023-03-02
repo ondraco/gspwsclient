@@ -3,7 +3,7 @@ import $ from "jquery";
 const EventEmitter = require("events");
 const WebSocket = require("isomorphic-ws");
 
-export function WS(url, key) {
+export function WS(url, profile, key) {
   // create fake DOM just so we can emit events
   var eventEmmiter = new EventEmitter();
 
@@ -80,16 +80,33 @@ export function WS(url, key) {
 
   function doAuth() {
     let headerLen = headerSize;
+    let profileSize = profile.length;
     let keySize = key.length;
+    let pos = 0;
+    let byteSize = headerLen + keySize + 2 + profileSize;
 
-    let arr = new ArrayBuffer(headerLen + keySize);
-    let view = new DataView(arr, 0, headerLen + keySize);
+    let arr = new ArrayBuffer(byteSize);
+    let view = new DataView(arr, 0, byteSize);
 
-    view.setInt16(0, MsgId.Authorize);
-    view.setInt16(2, key.length);
+    // Message ID
+    view.setInt16(pos, MsgId.Authorize);
+    pos += 2;
 
-    const u8View = new Int8Array(arr, 4);
-    encodeIntoAtPosition(key, u8View);
+    // Profile name length
+    view.setInt16(pos, profileSize);
+    pos += 2;
+
+    // write the profile name
+    let u8View = new Int8Array(arr, pos);
+    pos += encodeIntoAtPosition(profile, u8View);
+
+    // write the key length
+    view.setInt16(pos, keySize);
+    pos += 2;
+
+    // write the key
+    u8View = new Int8Array(arr, pos);
+    pos += encodeIntoAtPosition(key, u8View);
 
     socket.send(arr);
   }

@@ -1,5 +1,6 @@
 let host = "wss://127.0.0.1/API";
 let key = "k4UuIfxe1ik=";
+let profile = "Profile";
 let readTagIds = [0];
 let newTagValues = [
   {
@@ -43,7 +44,7 @@ $(function () {
 });
 
 function test() {
-  gws = new GSPClient.WS(host, key);
+  gws = new GSPClient.WS(host, profile, key);
   gws.addEventListener("error", onError);
   gws.addEventListener("ready", onReady);
   gws.addEventListener("tagValue", onNewValue);
