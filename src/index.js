@@ -79,11 +79,15 @@ export function WS(url, profile, key) {
   };
 
   function doAuth() {
-    if (profile === undefined)
+    if (profile === undefined) {
       pushError("Profile name is not defined!");
+      return false;
+    }
 
-    if (key === undefined)
+    if (key === undefined) {
       pushError("Key is not defined!");
+      return false;
+    }
 
     let headerLen = headerSize;
     let profileSize = profile.length;
@@ -115,6 +119,7 @@ export function WS(url, profile, key) {
     pos += encodeIntoAtPosition(key, u8View);
 
     socket.send(arr);
+    return true;
   }
 
   function encodeIntoAtPosition(input, view, pos) {
@@ -136,7 +141,9 @@ export function WS(url, profile, key) {
   }
 
   function onOpen(event) {
-    doAuth();
+    if (!doAuth()) {
+      pushError("Failed to authenticate!");
+    }
   }
 
   function CheckAuth() {
