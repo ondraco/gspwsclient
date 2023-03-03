@@ -11591,6 +11591,12 @@ function WS(url, profile, key) {
   };
 
   function doAuth() {
+    if (profile === undefined)
+      pushError("Profile name is not defined!");
+
+    if (key === undefined)
+      pushError("Key is not defined!");
+
     let headerLen = headerSize;
     let profileSize = profile.length;
     let keySize = key.length;
