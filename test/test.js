@@ -25,7 +25,7 @@ let newTagValues = [
   },
   {
     tag: 6,
-    val: "New-Text",
+    val: "New-Text1",
   },
   {
     tag: 7,

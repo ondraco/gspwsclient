@@ -15637,6 +15637,10 @@ function WS(url, profile, key) {
     socket.addEventListener("error", onWsError);
   };
 
+  function padTo4(toPad) {
+    return ((toPad - 1) | 3) + 1;
+  }
+
   function doAuth() {
     if (profile === undefined) {
       pushError("Profile name is not defined!");
@@ -15648,11 +15652,14 @@ function WS(url, profile, key) {
       return false;
     }
 
+    let encodedKey = textEncoder.encode(key);
+    let encodedProfile = textEncoder.encode(profile);
+
     let headerLen = headerSize;
-    let profileSize = profile.length;
-    let keySize = key.length;
+    let profileSize = encodedProfile.length;
+    let keySize = encodedKey.length;
     let pos = 0;
-    let byteSize = headerLen + keySize + 2 + profileSize;
+    let byteSize = headerLen + padTo4(keySize) + 2 + padTo4(profileSize);
 
     let arr = new ArrayBuffer(byteSize);
     let view = new DataView(arr, 0, byteSize);
@@ -15667,7 +15674,7 @@ function WS(url, profile, key) {
 
     // write the profile name
     let u8View = new Int8Array(arr, pos);
-    pos += encodeIntoAtPosition(profile, u8View);
+    pos += padTo4(copyIntoAtPosition(encodedProfile, u8View));
 
     // write the key length
     view.setInt16(pos, keySize);
@@ -15675,24 +15682,28 @@ function WS(url, profile, key) {
 
     // write the key
     u8View = new Int8Array(arr, pos);
-    pos += encodeIntoAtPosition(key, u8View);
+    pos += padTo4(copyIntoAtPosition(encodedKey, u8View));
 
     socket.send(arr);
     return true;
   }
 
-  function encodeIntoAtPosition(input, view, pos) {
+  function copyIntoAtPosition(encoded, view, pos) {
     if (pos === undefined) {
       pos = 0;
     }
-
-    let encoded = textEncoder.encode(input);
 
     for (let i = 0; i < encoded.length; ++i) {
       view[pos + i] = encoded[i];
     }
 
     return pos + encoded.length;
+  }
+
+  function encodeIntoAtPosition(input, view, pos) {
+    let encoded = textEncoder.encode(input);
+
+    return copyIntoAtPosition(encoded, view, pos);
   }
 
   function decodeString(view) {
@@ -15822,7 +15833,7 @@ function WS(url, profile, key) {
     switch (type) {
       case _this.TagType.GspString:
         pair.encoded = textEncoder.encode(pair.val);
-        pair.size = pair.encoded.length + 4;
+        pair.size = padTo4(pair.encoded.length) + 4;
         break;
       case _this.TagType.GspBit:
       case _this.TagType.GspByte:
@@ -16230,7 +16241,7 @@ function WS(url, profile, key) {
 
     const u8View = new Int8Array(req.arr, req.pos, chars);
     let val = decodeString(u8View);
-    req.pos += chars;
+    req.pos += padTo4(chars);
 
     values.push({ tag: tag, val: val, type: typeCache[tag] });
   }
@@ -16244,7 +16255,7 @@ function WS(url, profile, key) {
     for (let i = 0; i < pair.encoded.length; ++i) {
       view[i] = pair.encoded[i];
     }
-    req.pos += pair.encoded.length;
+    req.pos += padTo4(pair.encoded.length);
   }
 
   function onReceivedValues(arr, view, pos) {
